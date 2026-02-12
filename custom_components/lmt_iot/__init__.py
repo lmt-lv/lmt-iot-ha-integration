@@ -15,7 +15,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 import paho.mqtt.client as mqtt
 
 from .parser import parse_uplink_message
-from .config import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG
+from .config import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
 
 _LOGGER = logging.getLogger(__name__)
 

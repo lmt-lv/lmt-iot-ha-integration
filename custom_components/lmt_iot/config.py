@@ -8,6 +8,7 @@ CONF_CA_CERT = "ca_cert"
 CONF_CLIENT_CERT = "client_cert"
 CONF_CLIENT_KEY = "client_key"
 CONF_SENSOR_CONFIG = "sensor_config"
+CONF_DEVICE_TYPE = "device_type"
 
 API_URL = "https://mobile-api.lmt-iot.com/api"
 MQTT_HOST = "a9eo836zhfe6w-ats.iot.eu-central-1.amazonaws.com"

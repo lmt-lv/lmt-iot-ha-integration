@@ -5,10 +5,11 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, Sen
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_point_in_utc_time
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.util import dt as dt_util
 from datetime import timedelta
 
-from . import DOMAIN, CONF_DEVICE_ID, CONF_SENSOR_CONFIG
+from . import DOMAIN, CONF_DEVICE_ID, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,9 +18,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     """Set up LMT IoT sensors dynamically based on device config."""
     device_id = entry.data[CONF_DEVICE_ID]
     sensor_config = entry.data.get(CONF_SENSOR_CONFIG, [])
+    device_type = entry.data[CONF_DEVICE_TYPE]
 
     sensors = [
-        LMTIoTDynamicSensor(device_id, sensor)
+        LMTIoTDynamicSensor(device_id, sensor, device_type)
         for sensor in sensor_config
     ]
 
@@ -30,18 +32,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
     """Dynamic sensor for LMT IoT device."""
 
-    def __init__(self, device_id: str, config: dict):
+    def __init__(self, device_id: str, config: dict, device_type: str):
         """Initialize the sensor."""
         self._device_id = device_id
         self._key = config["key"]
-        self._attr_name = f"{device_id} {config['name']}"
+        self._attr_name = config['name']
         self._attr_unique_id = f"{device_id}_{config['key']}"
-        self._attr_has_entity_name = False
+        self._attr_has_entity_name = True
         self._attr_native_unit_of_measurement = config.get("unit")
         self._attr_native_value = None
         self._attr_available = True
         self._availability_timeout = timedelta(seconds=config.get("availabilityTimeout", 7200))
         self._unsub_availability = None
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, device_id)},
+            name=f"LMT IoT {device_id}",
+            manufacturer="LMT IoT",
+            model=device_type,
+        )
         
         state_class = config.get("stateClass")
         if state_class:

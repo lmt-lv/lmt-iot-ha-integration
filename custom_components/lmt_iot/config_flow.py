@@ -11,7 +11,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from . import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG
+from . import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
 from .config import API_URL, MQTT_HOST, MQTT_PORT
 
 _LOGGER = logging.getLogger(__name__)
@@ -108,7 +108,8 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             self._device_list.append({
                                 "id": device_id,
                                 "name": display_name,
-                                "device_name": display_name
+                                "device_name": display_name,
+                                "type": device_type
                             })
                             self._sensor_configs[device_id] = type_cache[device_type]["sensors"]
                     
@@ -133,7 +134,9 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._device_id = user_input[CONF_DEVICE_ID]
-            self._device_name = next((dev["device_name"] for dev in self._device_list if dev["id"] == self._device_id), None)
+            selected_device = next((dev for dev in self._device_list if dev["id"] == self._device_id), None)
+            self._device_name = selected_device["device_name"]
+            device_type = selected_device["type"]
             
             await self.async_set_unique_id(self._device_id)
             self._abort_if_unique_id_configured()
@@ -150,7 +153,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             raise Exception(f"Certificate API error: {response.status}")
                         provision_data = await response.json()
                         _LOGGER.info(f"Certificate response: {provision_data}")
-                        return await self._provision_device(provision_data)
+                        return await self._provision_device(provision_data, device_type)
             except Exception as e:
                 _LOGGER.error(f"Certificate retrieval failed for device {self._device_id}: {e}", exc_info=True)
 
@@ -166,7 +169,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors
         )
 
-    async def _provision_device(self, data):
+    async def _provision_device(self, data, device_type):
         """Provision device with received credentials."""
         _LOGGER.info(f"Provisioning device: {self._device_id}")
         ca_cert = await self._get_amazon_root_ca()
@@ -187,6 +190,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_DEVICE_ID: self._device_id,
                 CONF_API_KEY: self._api_key,
                 CONF_SENSOR_CONFIG: self._sensor_configs.get(self._device_id, []),
+                CONF_DEVICE_TYPE: device_type,
             }
         )
 
