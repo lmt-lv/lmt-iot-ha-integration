@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "LMT IoT Integration",
+        "description": "To connect your LMT IoT devices to Home Assistant, you'll need an API Key. This key allows Home Assistant to securely access your devices, retrieve their information, and set up the connection. You can find your API Key in your LMT IoT portal account settings.",
+        "data": {
+          "api_key": "API Key"
+        },
+        "data_description": {
+          "api_key": "Enter your API key from the portal"
+        }
+      },
+      "device_select": {
+        "title": "Select Device",
+        "description": "Choose a device to add to Home Assistant",
+        "data": {
+          "device_id": "Device"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to provisioning service",
+      "invalid_api_key": "Invalid API Key. Please check your credentials",
+      "unknown": "Unknown error occurred"
+    },
+    "abort": {
+      "no_devices": "No devices with smart home enabled found",
+      "already_configured": "This device is already configured"
+    }
+  }
+}

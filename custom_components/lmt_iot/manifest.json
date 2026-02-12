@@ -1,0 +1,11 @@
+{
+  "domain": "lmt_iot",
+  "name": "LMT IoT",
+  "documentation": "https://github.com/lmt-iot/homeassistant-integration",
+  "requirements": ["paho-mqtt>=1.6.1", "aiohttp>=3.8.0"],
+  "codeowners": ["@lmt-iot"],
+  "version": "1.0.0",
+  "iot_class": "cloud_push",
+  "config_flow": true,
+  "icon": "icon.png"
+}

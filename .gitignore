@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Certificates and secrets
+*.pem
+*.crt
+*.key
+*.p12
+
+# Home Assistant
+config/
+home-assistant.log
+home-assistant_v2.db
+*.db-shm
+*.db-wal
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

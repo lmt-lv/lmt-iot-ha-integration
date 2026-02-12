@@ -1,0 +1,5 @@
+{
+  "name": "LMT IoT",
+  "render_readme": true,
+  "domains": ["mqtt", "sensor"]
+}

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: homeassistant/home-assistant:2026.2
+    volumes:
+      - ./config:/config
+      - ./configuration.yaml:/config/configuration.yaml
+      - ./custom_components/lmt_iot:/config/custom_components/lmt_iot
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8100:8123"
+    restart: unless-stopped
+    privileged: true
