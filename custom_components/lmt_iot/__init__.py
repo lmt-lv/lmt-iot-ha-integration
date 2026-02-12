@@ -1,6 +1,7 @@
 """LMT IoT Device Integration for Home Assistant.
 
 Developed by LMT IoT
+https://github.com/lmt-lv/lmt-iot-ha-integration
 """
 import logging
 import ssl

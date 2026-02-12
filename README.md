@@ -4,6 +4,8 @@
 
 Custom component for automatic LMT IoT device provisioning and cloud connectivity.
 
+**Repository**: https://github.com/lmt-lv/lmt-iot-ha-integration
+
 ## For End Users
 
 ### Requirements
@@ -34,3 +36,8 @@ After setup, your device will automatically connect to the cloud and receive dat
 - Check Home Assistant logs for connection errors
 - Verify your device ID is correct
 - Contact support if activation fails
+
+## Support
+
+- **Issues**: https://github.com/lmt-lv/lmt-iot-ha-integration/issues
+- **Documentation**: https://github.com/lmt-lv/lmt-iot-ha-integration

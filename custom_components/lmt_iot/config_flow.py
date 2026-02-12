@@ -1,6 +1,7 @@
 """Config flow for LMT IoT Device integration.
 
 Developed by LMT IoT
+https://github.com/lmt-lv/lmt-iot-ha-integration
 """
 import logging
 import voluptuous as vol
