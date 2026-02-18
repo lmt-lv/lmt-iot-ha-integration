@@ -10,7 +10,15 @@ Custom component for automatic LMT IoT device provisioning and cloud connectivit
 
 ### Requirements
 
-- **API key**: Found in LMT IoT Mobile App or at https://mobile.lmt-iot.com/
+- **API key**: Create one following the instructions below
+
+### Creating an API Key
+
+1. Open https://mobile.lmt-iot.com web client portal
+2. Select **Settings** section on the left-hand side
+3. Press **Create API Key** button in the **SECURITY** section
+4. Provide API Key name and select **READ** and **WRITE** access for the key
+5. Copy the API-KEY secret value and paste it in the Home Assistant integration
 
 ### Installation
 
@@ -21,7 +29,7 @@ Custom component for automatic LMT IoT device provisioning and cloud connectivit
 5. Search for "LMT IoT"
 6. Enter your API key
 7. Select your device from the list
-8. Click Submit - your device will be automatically activated
+8. Click Submit – your device will be automatically activated
 
 ## Usage
 

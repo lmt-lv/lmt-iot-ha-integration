@@ -22,6 +22,12 @@
     "error": {
       "cannot_connect": "Failed to connect to provisioning service",
       "invalid_api_key": "Invalid API Key. Please check your credentials",
+      "insufficient_permissions": "API Key does not have sufficient permissions. Ensure READ and WRITE access is enabled",
+      "server_error": "Server error occurred. Please try again later",
+      "api_error": "API request failed. Please check your configuration",
+      "timeout": "Request timed out. Please check your internet connection",
+      "connection_error": "Connection error. Please check your internet connection",
+      "device_not_found": "Device not found or not accessible with this API key",
       "unknown": "Unknown error occurred"
     },
     "abort": {

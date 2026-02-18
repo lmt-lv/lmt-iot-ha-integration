@@ -82,9 +82,16 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             async with aiohttp.ClientSession() as session:
                 headers = {"X-API-KEY": self._api_key}
-                async with session.get(f"{self._api_url}/devices", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                    if response.status >= 300:
-                        raise Exception(f"API error: {response.status}")
+                async with session.get(f"{self._api_url}/devices?limit=50", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    if response.status == 401:
+                        return self._show_api_error("invalid_api_key")
+                    elif response.status == 403:
+                        return self._show_api_error("insufficient_permissions")
+                    elif response.status >= 500:
+                        return self._show_api_error("server_error")
+                    elif response.status >= 400:
+                        return self._show_api_error("api_error")
+                    
                     devices = (await response.json()).get("data", [])
                     
                     type_cache = {}
@@ -117,14 +124,22 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         return self.async_abort(reason="no_devices")
                     
                     return await self.async_step_device_select()
+        except aiohttp.ClientTimeout:
+            return self._show_api_error("timeout")
+        except aiohttp.ClientError:
+            return self._show_api_error("connection_error")
         except Exception as e:
             _LOGGER.error(f"Failed to get devices: {e}", exc_info=True)
+            return self._show_api_error("cannot_connect")
+
+    def _show_api_error(self, error_key):
+        """Show API error form."""
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_API_KEY): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
             }),
-            errors={"base": "cannot_connect"},
+            errors={"base": error_key},
             description_placeholders={"info": "Enter your X-API-KEY from the developer portal"}
         )
 
@@ -149,15 +164,27 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     headers = {"X-API-KEY": self._api_key}
                     data = {"target": "SMART_HOME"}
                     async with session.post(f"{self._api_url}/devices/{self._device_id}/certificates", headers=headers, json=data, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                        if response.status >= 300:
-                            raise Exception(f"Certificate API error: {response.status}")
-                        provision_data = await response.json()
-                        _LOGGER.info(f"Certificate response: {provision_data}")
-                        return await self._provision_device(provision_data, device_type)
+                        if response.status == 401:
+                            errors["base"] = "invalid_api_key"
+                        elif response.status == 403:
+                            errors["base"] = "insufficient_permissions"
+                        elif response.status == 404:
+                            errors["base"] = "device_not_found"
+                        elif response.status >= 500:
+                            errors["base"] = "server_error"
+                        elif response.status >= 400:
+                            errors["base"] = "api_error"
+                        else:
+                            provision_data = await response.json()
+                            _LOGGER.info(f"Certificate response: {provision_data}")
+                            return await self._provision_device(provision_data, device_type)
+            except aiohttp.ClientTimeout:
+                errors["base"] = "timeout"
+            except aiohttp.ClientError:
+                errors["base"] = "connection_error"
             except Exception as e:
                 _LOGGER.error(f"Certificate retrieval failed for device {self._device_id}: {e}", exc_info=True)
-
-            errors["base"] = "cannot_connect"
+                errors["base"] = "cannot_connect"
 
         device_options = {dev["id"]: dev["name"] for dev in self._device_list}
 

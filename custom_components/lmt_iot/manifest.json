@@ -2,6 +2,7 @@
   "domain": "lmt_iot",
   "name": "LMT IoT",
   "documentation": "https://github.com/lmt-lv/lmt-iot-ha-integration",
+  "issue_tracker": "https://github.com/lmt-lv/lmt-iot-ha-integration/issues",
   "requirements": ["paho-mqtt>=1.6.1", "aiohttp>=3.8.0"],
   "codeowners": ["@lmt-iot"],
   "version": "1.0.0",
