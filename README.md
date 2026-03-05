@@ -22,14 +22,32 @@ Custom component for automatic LMT IoT device provisioning and cloud connectivit
 
 ### Installation
 
+#### Option 1: HACS (Recommended)
+
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the three dots in the top right corner
+4. Select "Custom repositories"
+5. Add repository URL: `https://github.com/lmt-lv/lmt-iot-ha-integration`
+6. Select category: "Integration"
+7. Click "Add"
+8. Search for "LMT IoT" in HACS
+9. Click "Download"
+10. Restart Home Assistant
+
+#### Option 2: Manual Installation
+
 1. Copy the `custom_components/lmt_iot` folder to your Home Assistant `config/custom_components/` directory
 2. Restart Home Assistant
-3. Go to Configuration > Integrations
-4. Click "+ Add Integration"
-5. Search for "LMT IoT"
-6. Enter your API key
-7. Select your device from the list
-8. Click Submit – your device will be automatically activated
+
+#### Configuration
+
+1. Go to Configuration > Integrations
+2. Click "+ Add Integration"
+3. Search for "LMT IoT"
+4. Enter your API key
+5. Select your device from the list
+6. Click Submit – your device will be automatically activated
 
 ## Usage
 
