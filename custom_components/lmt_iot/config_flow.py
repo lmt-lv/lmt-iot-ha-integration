@@ -34,11 +34,11 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _format_device_display_name(self, device: dict, device_id: str) -> str:
         """Format device display name from device data."""
-        room = device.get("room", {})
+        room = device.get("room") or {}
         custom_name = room.get("customName")
-        default_name = room.get("name", "")
+        default_name = room.get("name") or ""
         room_name = custom_name if custom_name else (default_name.title() if default_name else "")
-        house_name = room.get("house", {}).get("name", "")
+        house_name = (room.get("house") or {}).get("name", "")
         
         display_parts = []
         if house_name:
