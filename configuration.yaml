@@ -13,4 +13,4 @@ recorder:
 logger:
   default: info
   logs:
-    custom_components.lmt_iot_mqtt: debug
+    custom_components.lmt_iot: debug

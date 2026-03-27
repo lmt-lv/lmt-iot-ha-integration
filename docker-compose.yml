@@ -3,7 +3,7 @@ version: '3.8'
 services:
   homeassistant:
     container_name: homeassistant
-    image: homeassistant/home-assistant:2026.2
+    image: homeassistant/home-assistant:2026.3
     volumes:
       - ./config:/config
       - ./configuration.yaml:/config/configuration.yaml

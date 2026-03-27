@@ -11,6 +11,13 @@
           "api_key": "Enter your API key from the portal"
         }
       },
+      "account_confirm": {
+        "title": "Select Account",
+        "description": "Choose which account to use for adding a new device",
+        "data": {
+          "account": "Account"
+        }
+      },
       "device_select": {
         "title": "Select Device",
         "description": "Choose a device to add to Home Assistant",

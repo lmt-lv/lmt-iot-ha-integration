@@ -31,6 +31,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._api_key = None
         self._device_list = []
         self._sensor_configs = {}
+        self._skip_existing_key = False
 
     def _format_device_display_name(self, device: dict, device_id: str) -> str:
         """Format device display name from device data."""
@@ -53,20 +54,14 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step - API key input or device selection."""
         errors = {}
 
-        existing_api_key = None
-        for entry in self._async_current_entries():
-            if CONF_API_KEY in entry.data:
-                existing_api_key = entry.data[CONF_API_KEY]
-                break
-
-        if existing_api_key:
-            # Skip API key input, use existing key
-            self._api_key = existing_api_key
-            return await self._get_device_list()
+        existing_api_keys = list({entry.data[CONF_API_KEY] for entry in self._async_current_entries() if CONF_API_KEY in entry.data})[:5]
 
         if user_input is not None:
             self._api_key = user_input[CONF_API_KEY]
             return await self._get_device_list()
+
+        if existing_api_keys and not self._skip_existing_key:
+            return await self._show_account_confirm(existing_api_keys)
 
         return self.async_show_form(
             step_id="user",
@@ -77,8 +72,69 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={"info": "Enter your X-API-KEY from the developer portal"}
         )
 
+    async def _show_account_confirm(self, api_keys):
+        """Show account confirmation with user info and option to change API key."""
+        self._account_options = {}
+        options = []
+        for key in api_keys:
+            self._api_key = key
+            user_info = await self._get_user_info()
+            if user_info is None:
+                continue
+            name = user_info.get("name")
+            phone = user_info.get("phoneNumber", "Unknown")
+            label = f"{name} ({phone})" if name else phone
+            self._account_options[key] = label
+            options.append(selector.SelectOptionDict(value=key, label=label))
+
+        if not options:
+            self._api_key = None
+            return self._show_api_error("invalid_api_key")
+
+        options.append(selector.SelectOptionDict(value="new", label="Use a different account"))
+        return self.async_show_form(
+            step_id="account_confirm",
+            data_schema=vol.Schema({
+                vol.Required("account", default=options[0]["value"]): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=options, mode=selector.SelectSelectorMode.LIST),
+                ),
+            }),
+        )
+
+    async def async_step_account_confirm(self, user_input=None):
+        """Handle account confirmation step."""
+        if user_input is not None:
+            if user_input.get("account") == "new":
+                self._api_key = None
+                self._skip_existing_key = True
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=vol.Schema({
+                        vol.Required(CONF_API_KEY): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
+                    }),
+                    description_placeholders={"info": "Enter your X-API-KEY from the developer portal"},
+                )
+            self._api_key = user_input["account"]
+            return await self._get_device_list()
+        return await self._get_device_list()
+
+    async def _get_user_info(self):
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"X-API-KEY": self._api_key}
+                async with session.get(f"{self._api_url}/user", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return data
+                    _LOGGER.warning(f"User info request failed with status {response.status}")
+        except Exception as e:
+            _LOGGER.warning(f"Failed to fetch user info: {e}")
+        return None
+
     async def _get_device_list(self):
         """Get device list from API."""
+        self._device_list = []
+        self._sensor_configs = {}
         try:
             async with aiohttp.ClientSession() as session:
                 headers = {"X-API-KEY": self._api_key}
@@ -134,6 +190,10 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _show_api_error(self, error_key):
         """Show API error form."""
+        self._api_key = None
+        self._device_list = []
+        self._sensor_configs = {}
+        self._skip_existing_key = True
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
