@@ -23,6 +23,12 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow handler."""
+        return LMTIoTOptionsFlow(config_entry)
+
     def __init__(self):
         """Initialize the config flow."""
         self._device_id = None
@@ -279,6 +285,40 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_SENSOR_CONFIG: self._sensor_configs.get(self._device_id, []),
                 CONF_DEVICE_TYPE: device_type,
             }
+        )
+
+class LMTIoTOptionsFlow(config_entries.OptionsFlow):
+    def __init__(self, config_entry):
+        self._config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        errors = {}
+
+        if user_input is not None:
+            new_key = user_input[CONF_API_KEY]
+            try:
+                async with aiohttp.ClientSession() as session:
+                    headers = {"X-API-KEY": new_key}
+                    async with session.get(f"{API_URL}/user", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                        if response.status != 200:
+                            errors["base"] = "invalid_api_key"
+            except Exception:
+                errors["base"] = "cannot_connect"
+
+            if not errors:
+                new_data = {**self._config_entry.data, CONF_API_KEY: new_key}
+                self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
+                await self.hass.config_entries.async_reload(self._config_entry.entry_id)
+                return self.async_create_entry(title="", data={})
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required(CONF_API_KEY): selector.TextSelector(
+                    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+                ),
+            }),
+            errors=errors,
         )
 
     async def _get_amazon_root_ca(self):

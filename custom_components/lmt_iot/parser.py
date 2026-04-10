@@ -46,11 +46,12 @@ def _parse_v1_uplink(payload: dict) -> dict | None:
         
         if "mSmokeStatus" in device_data:
             smoke_status = device_data["mSmokeStatus"]
-            status_map = {0: "OK", 1: "WARNING", 2: "ALARM"}
+            status_map = {0: "No smoke", 1: "Warning", 2: "Alarm"}
             parsed["SMOKE_STATUS"] = status_map.get(smoke_status, "UNKNOWN")
         
         if "mRsrp" in device_data and device_data["mRsrp"] is not None:
             parsed["RSRP"] = device_data["mRsrp"]
+            parsed["SIGNAL_STRENGTH"] = _classify_signal(device_data["mRsrp"])
         if "mRsrq" in device_data and device_data["mRsrq"] is not None:
             parsed["RSRQ"] = device_data["mRsrq"]
         if "mSinr" in device_data and device_data["mSinr"] is not None:
@@ -59,6 +60,14 @@ def _parse_v1_uplink(payload: dict) -> dict | None:
         return parsed if parsed else None
     
     return None
+
+
+def _classify_signal(rsrp: int) -> str:
+    if rsrp >= -95:
+        return "Good"
+    elif rsrp >= -105:
+        return "Moderate"
+    return "Bad"
 
 
 def _parse_v2_uplink(payload: dict) -> dict | None:
@@ -74,9 +83,11 @@ def _parse_v2_uplink(payload: dict) -> dict | None:
             signal = values[-1]
             if len(signal) >= 4:
                 try:
-                    parsed["RSRP"] = int(signal[1])
+                    rsrp = int(signal[1])
+                    parsed["RSRP"] = rsrp
                     parsed["RSRQ"] = int(signal[2])
                     parsed["SINR"] = int(signal[3])
+                    parsed["SIGNAL_STRENGTH"] = _classify_signal(rsrp)
                 except (ValueError, TypeError, IndexError):
                     pass
         elif values:

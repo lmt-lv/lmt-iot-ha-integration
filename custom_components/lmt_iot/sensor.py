@@ -51,6 +51,10 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
             model=device_type,
         )
         
+        precision = config.get("precision")
+        if precision is not None:
+            self._attr_suggested_display_precision = precision
+
         state_class = config.get("stateClass")
         if state_class:
             state_class = state_class.lower()
@@ -100,7 +104,7 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
                 payload = event.data["payload"]
                 if self._key in payload:
                     value = payload[self._key]
-                    if isinstance(value, (int, float)):
+                    if self._attr_state_class is not None and isinstance(value, (int, float)):
                         self._attr_native_value = float(value)
                     else:
                         self._attr_native_value = value

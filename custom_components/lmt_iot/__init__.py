@@ -9,13 +9,15 @@ import tempfile
 import os
 import json
 from enum import IntEnum
+import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.components.persistent_notification import async_create
 import paho.mqtt.client as mqtt
 
 from .parser import parse_uplink_message
-from .config import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
+from .config import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE, API_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +34,7 @@ class MQTTConnectionResult(IntEnum):
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up LMT IoT MQTT from a config entry."""
     hass.data.setdefault(DOMAIN, {})
+    await _refresh_sensor_config(hass, entry)
     
     def setup_mqtt_client():
         """Set up MQTT client with TLS in executor."""
@@ -138,6 +141,45 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     return unload_ok
 
+def _notify_reload_fallback(hass: HomeAssistant, entry: ConfigEntry, reason: str) -> None:
+    device_id = entry.data.get(CONF_DEVICE_ID, "unknown")
+    async_create(
+        hass,
+        f"Failed to refresh sensor configuration for device **{device_id}**: {reason}.\n\n"
+        "Your API key may have been deleted or disabled. "
+        "You can provide a new one via **Settings → Devices & Services → LMT IoT → Configure**.\n\n"
+        "The integration was reloaded with the previously cached configuration.",
+        title="LMT IoT: Sensor config refresh failed",
+        notification_id=f"{DOMAIN}_reload_{entry.entry_id}",
+    )
+
+async def _refresh_sensor_config(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    api_key = entry.data.get(CONF_API_KEY)
+    device_type = entry.data.get(CONF_DEVICE_TYPE)
+
+    if not api_key or not device_type:
+        return
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {"X-API-KEY": api_key}
+            async with session.get(
+                f"{API_URL}/devices/types/{device_type}",
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as response:
+                if response.status == 200:
+                    type_data = await response.json()
+                    sensors = ((type_data.get("measurements") or {}).get("smartHome") or {}).get("sensors", [])
+                    new_data = {**entry.data, CONF_SENSOR_CONFIG: sensors}
+                    hass.config_entries.async_update_entry(entry, data=new_data)
+                    _LOGGER.info("Refreshed sensor config from API (%d sensors)", len(sensors))
+                else:
+                    _LOGGER.warning("Failed to refresh sensor config: HTTP %s", response.status)
+                    _notify_reload_fallback(hass, entry, f"API returned HTTP {response.status}")
+    except Exception as e:
+        _LOGGER.warning("Failed to refresh sensor config: %s", e)
+        _notify_reload_fallback(hass, entry, str(e))
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""

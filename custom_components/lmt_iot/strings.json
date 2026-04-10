@@ -41,5 +41,20 @@
       "no_devices": "No devices with smart home enabled found",
       "already_configured": "This device is already configured"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update API Key",
+        "description": "Enter a new API key for this device",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Invalid API Key. Please check your credentials",
+      "cannot_connect": "Failed to connect. Please check your internet connection"
+    }
   }
 }
