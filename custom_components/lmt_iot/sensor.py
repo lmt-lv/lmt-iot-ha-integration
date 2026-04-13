@@ -1,7 +1,13 @@
 """Sensor platform for LMT IoT Device integration."""
+
 import logging
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass, RestoreEntity
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
+    RestoreEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_point_in_utc_time
@@ -14,15 +20,16 @@ from . import DOMAIN, CONF_DEVICE_ID, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+):
     """Set up LMT IoT sensors dynamically based on device config."""
     device_id = entry.data[CONF_DEVICE_ID]
     sensor_config = entry.data.get(CONF_SENSOR_CONFIG, [])
     device_type = entry.data[CONF_DEVICE_TYPE]
 
     sensors = [
-        LMTIoTDynamicSensor(device_id, sensor, device_type)
-        for sensor in sensor_config
+        LMTIoTDynamicSensor(device_id, sensor, device_type) for sensor in sensor_config
     ]
 
     _LOGGER.info(f"Creating {len(sensors)} sensors for device {device_id}")
@@ -36,13 +43,15 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
         """Initialize the sensor."""
         self._device_id = device_id
         self._key = config["key"]
-        self._attr_name = config['name']
+        self._attr_name = config["name"]
         self._attr_unique_id = f"{device_id}_{config['key']}"
         self._attr_has_entity_name = True
         self._attr_native_unit_of_measurement = config.get("unit")
         self._attr_native_value = None
         self._attr_available = True
-        self._availability_timeout = timedelta(seconds=config.get("availabilityTimeout", 7200))
+        self._availability_timeout = timedelta(
+            seconds=config.get("availabilityTimeout", 7200)
+        )
         self._unsub_availability = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device_id)},
@@ -50,7 +59,7 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
             manufacturer="LMT IoT",
             model=device_type,
         )
-        
+
         precision = config.get("precision")
         if precision is not None:
             self._attr_suggested_display_precision = precision
@@ -76,12 +85,14 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
     async def async_added_to_hass(self):
         """Subscribe to MQTT messages via event bus."""
         await super().async_added_to_hass()
-        
-        _LOGGER.info(f"Setting up sensor: {self._attr_name} (unique_id: {self._attr_unique_id})")
-        
+
+        _LOGGER.info(
+            f"Setting up sensor: {self._attr_name} (unique_id: {self._attr_unique_id})"
+        )
+
         last_state = await self.async_get_last_state()
         _LOGGER.info(f"Last state for {self._attr_name}: {last_state}")
-        
+
         if last_state and last_state.state not in ("unknown", "unavailable", None):
             try:
                 if self._attr_state_class is None:
@@ -90,7 +101,9 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
                     self._attr_native_value = float(last_state.state)
                 _LOGGER.info(f"Restored {self._attr_name}: {self._attr_native_value}")
             except (ValueError, TypeError) as e:
-                _LOGGER.warning(f"Could not restore state for {self._attr_name}: {last_state.state} - {e}")
+                _LOGGER.warning(
+                    f"Could not restore state for {self._attr_name}: {last_state.state} - {e}"
+                )
         else:
             _LOGGER.info(f"No valid last state to restore for {self._attr_name}")
 
@@ -104,7 +117,9 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
                 payload = event.data["payload"]
                 if self._key in payload:
                     value = payload[self._key]
-                    if self._attr_state_class is not None and isinstance(value, (int, float)):
+                    if self._attr_state_class is not None and isinstance(
+                        value, (int, float)
+                    ):
                         self._attr_native_value = float(value)
                     else:
                         self._attr_native_value = value
@@ -112,25 +127,28 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
                     self._schedule_availability_check()
                     self.async_write_ha_state()
                     _LOGGER.debug(
-                        f"{self._attr_name} updated: {self._attr_native_value}{self._attr_native_unit_of_measurement or ''}")
+                        f"{self._attr_name} updated: {self._attr_native_value}{self._attr_native_unit_of_measurement or ''}"
+                    )
             except Exception as e:
                 _LOGGER.error(f"Error parsing {self._key}: {e}")
 
         self.async_on_remove(
             self.hass.bus.async_listen(f"{DOMAIN}_uplink_message", handle_message)
         )
-    
+
     def _schedule_availability_check(self):
         """Schedule availability timeout check."""
         if self._unsub_availability:
             self._unsub_availability()
-        
+
         @callback
         def mark_unavailable(_):
             self._attr_available = False
             self.async_write_ha_state()
-            _LOGGER.warning(f"{self._attr_name} marked unavailable (no data for {self._availability_timeout})")
-        
+            _LOGGER.warning(
+                f"{self._attr_name} marked unavailable (no data for {self._availability_timeout})"
+            )
+
         self._unsub_availability = async_track_point_in_utc_time(
             self.hass, mark_unavailable, dt_util.utcnow() + self._availability_timeout
         )
