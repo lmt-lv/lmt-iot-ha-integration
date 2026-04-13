@@ -3,6 +3,7 @@
 Developed by LMT IoT
 https://github.com/lmt-lv/lmt-iot-ha-integration
 """
+
 import logging
 import voluptuous as vol
 import aiohttp
@@ -11,12 +12,22 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from . import DOMAIN, CONF_DEVICE_ID, CONF_API_KEY, CONF_CA_CERT, CONF_CLIENT_CERT, CONF_CLIENT_KEY, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
+from . import (
+    DOMAIN,
+    CONF_DEVICE_ID,
+    CONF_API_KEY,
+    CONF_CA_CERT,
+    CONF_CLIENT_CERT,
+    CONF_CLIENT_KEY,
+    CONF_SENSOR_CONFIG,
+    CONF_DEVICE_TYPE,
+)
 from .config import API_URL, MQTT_HOST, MQTT_PORT
 
 _LOGGER = logging.getLogger(__name__)
 
 CONF_DEVICE_LIST = "device_list"
+
 
 class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for LMT IoT Device."""
@@ -44,23 +55,33 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         room = device.get("room") or {}
         custom_name = room.get("customName")
         default_name = room.get("name") or ""
-        room_name = custom_name if custom_name else (default_name.title() if default_name else "")
+        room_name = (
+            custom_name
+            if custom_name
+            else (default_name.title() if default_name else "")
+        )
         house_name = (room.get("house") or {}).get("name", "")
-        
+
         display_parts = []
         if house_name:
             display_parts.append(house_name)
         if room_name:
             display_parts.append(room_name)
         display_parts.append(f"({device_id})")
-        
+
         return " - ".join(display_parts)
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step - API key input or device selection."""
         errors = {}
 
-        existing_api_keys = list({entry.data[CONF_API_KEY] for entry in self._async_current_entries() if CONF_API_KEY in entry.data})[:5]
+        existing_api_keys = list(
+            {
+                entry.data[CONF_API_KEY]
+                for entry in self._async_current_entries()
+                if CONF_API_KEY in entry.data
+            }
+        )[:5]
 
         if user_input is not None:
             self._api_key = user_input[CONF_API_KEY]
@@ -71,11 +92,19 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_API_KEY): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.PASSWORD
+                        )
+                    ),
+                }
+            ),
             errors=errors,
-            description_placeholders={"info": "Enter your X-API-KEY from the developer portal"}
+            description_placeholders={
+                "info": "Enter your X-API-KEY from the developer portal"
+            },
         )
 
     async def _show_account_confirm(self, api_keys):
@@ -97,14 +126,22 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._api_key = None
             return self._show_api_error("invalid_api_key")
 
-        options.append(selector.SelectOptionDict(value="new", label="Use a different account"))
+        options.append(
+            selector.SelectOptionDict(value="new", label="Use a different account")
+        )
         return self.async_show_form(
             step_id="account_confirm",
-            data_schema=vol.Schema({
-                vol.Required("account", default=options[0]["value"]): selector.SelectSelector(
-                    selector.SelectSelectorConfig(options=options, mode=selector.SelectSelectorMode.LIST),
-                ),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "account", default=options[0]["value"]
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options, mode=selector.SelectSelectorMode.LIST
+                        ),
+                    ),
+                }
+            ),
         )
 
     async def async_step_account_confirm(self, user_input=None):
@@ -115,10 +152,18 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._skip_existing_key = True
                 return self.async_show_form(
                     step_id="user",
-                    data_schema=vol.Schema({
-                        vol.Required(CONF_API_KEY): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
-                    }),
-                    description_placeholders={"info": "Enter your X-API-KEY from the developer portal"},
+                    data_schema=vol.Schema(
+                        {
+                            vol.Required(CONF_API_KEY): selector.TextSelector(
+                                selector.TextSelectorConfig(
+                                    type=selector.TextSelectorType.PASSWORD
+                                )
+                            ),
+                        }
+                    ),
+                    description_placeholders={
+                        "info": "Enter your X-API-KEY from the developer portal"
+                    },
                 )
             self._api_key = user_input["account"]
             return await self._get_device_list()
@@ -128,11 +173,17 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             async with aiohttp.ClientSession() as session:
                 headers = {"X-API-KEY": self._api_key}
-                async with session.get(f"{self._api_url}/user", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                async with session.get(
+                    f"{self._api_url}/user",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as response:
                     if response.status == 200:
                         data = await response.json()
                         return data
-                    _LOGGER.warning(f"User info request failed with status {response.status}")
+                    _LOGGER.warning(
+                        f"User info request failed with status {response.status}"
+                    )
         except Exception as e:
             _LOGGER.warning(f"Failed to fetch user info: {e}")
         return None
@@ -144,7 +195,11 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             async with aiohttp.ClientSession() as session:
                 headers = {"X-API-KEY": self._api_key}
-                async with session.get(f"{self._api_url}/devices?limit=50", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                async with session.get(
+                    f"{self._api_url}/devices?limit=50",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as response:
                     if response.status == 401:
                         return self._show_api_error("invalid_api_key")
                     elif response.status == 403:
@@ -153,38 +208,50 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         return self._show_api_error("server_error")
                     elif response.status >= 400:
                         return self._show_api_error("api_error")
-                    
+
                     devices = (await response.json()).get("data", [])
-                    
+
                     type_cache = {}
                     for device in devices:
                         device_type = device["type"]
                         if device_type not in type_cache:
-                            async with session.get(f"{self._api_url}/devices/types/{device_type}", headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as type_response:
+                            async with session.get(
+                                f"{self._api_url}/devices/types/{device_type}",
+                                headers=headers,
+                                timeout=aiohttp.ClientTimeout(total=30),
+                            ) as type_response:
                                 if type_response.status >= 300:
                                     continue
                                 type_data = await type_response.json()
-                                smart_home = (type_data.get("measurements") or {}).get("smartHome") or {}
+                                smart_home = (type_data.get("measurements") or {}).get(
+                                    "smartHome"
+                                ) or {}
                                 type_cache[device_type] = {
                                     "enabled": smart_home.get("enabled", False),
-                                    "sensors": smart_home.get("sensors", [])
+                                    "sensors": smart_home.get("sensors", []),
                                 }
-                        
+
                         if type_cache.get(device_type, {}).get("enabled"):
                             device_id = device["serialNumber"]
-                            display_name = self._format_device_display_name(device, device_id)
-                            
-                            self._device_list.append({
-                                "id": device_id,
-                                "name": display_name,
-                                "device_name": display_name,
-                                "type": device_type
-                            })
-                            self._sensor_configs[device_id] = type_cache[device_type]["sensors"]
-                    
+                            display_name = self._format_device_display_name(
+                                device, device_id
+                            )
+
+                            self._device_list.append(
+                                {
+                                    "id": device_id,
+                                    "name": display_name,
+                                    "device_name": display_name,
+                                    "type": device_type,
+                                }
+                            )
+                            self._sensor_configs[device_id] = type_cache[device_type][
+                                "sensors"
+                            ]
+
                     if not self._device_list:
                         return self.async_abort(reason="no_devices")
-                    
+
                     return await self.async_step_device_select()
         except aiohttp.ClientTimeout:
             return self._show_api_error("timeout")
@@ -202,11 +269,19 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._skip_existing_key = True
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_API_KEY): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.PASSWORD
+                        )
+                    ),
+                }
+            ),
             errors={"base": error_key},
-            description_placeholders={"info": "Enter your X-API-KEY from the developer portal"}
+            description_placeholders={
+                "info": "Enter your X-API-KEY from the developer portal"
+            },
         )
 
     async def async_step_device_select(self, user_input=None):
@@ -215,13 +290,15 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._device_id = user_input[CONF_DEVICE_ID]
-            selected_device = next((dev for dev in self._device_list if dev["id"] == self._device_id), None)
+            selected_device = next(
+                (dev for dev in self._device_list if dev["id"] == self._device_id), None
+            )
             self._device_name = selected_device["device_name"]
             device_type = selected_device["type"]
-            
+
             await self.async_set_unique_id(self._device_id)
             self._abort_if_unique_id_configured()
-            
+
             _LOGGER.info(f"User selected device: {self._device_id}")
 
             try:
@@ -229,7 +306,12 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 async with aiohttp.ClientSession() as session:
                     headers = {"X-API-KEY": self._api_key}
                     data = {"target": "SMART_HOME"}
-                    async with session.post(f"{self._api_url}/devices/{self._device_id}/certificates", headers=headers, json=data, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    async with session.post(
+                        f"{self._api_url}/devices/{self._device_id}/certificates",
+                        headers=headers,
+                        json=data,
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response:
                         if response.status == 401:
                             errors["base"] = "invalid_api_key"
                         elif response.status == 403:
@@ -243,34 +325,47 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         else:
                             provision_data = await response.json()
                             _LOGGER.info(f"Certificate response: {provision_data}")
-                            return await self._provision_device(provision_data, device_type)
+                            return await self._provision_device(
+                                provision_data, device_type
+                            )
             except aiohttp.ClientTimeout:
                 errors["base"] = "timeout"
             except aiohttp.ClientError:
                 errors["base"] = "connection_error"
             except Exception as e:
-                _LOGGER.error(f"Certificate retrieval failed for device {self._device_id}: {e}", exc_info=True)
+                _LOGGER.error(
+                    f"Certificate retrieval failed for device {self._device_id}: {e}",
+                    exc_info=True,
+                )
                 errors["base"] = "cannot_connect"
 
         device_options = {dev["id"]: dev["name"] for dev in self._device_list}
 
         return self.async_show_form(
             step_id="device_select",
-            data_schema=vol.Schema({
-                vol.Required(CONF_DEVICE_ID): vol.In(device_options),
-            }),
-            errors=errors
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DEVICE_ID): vol.In(device_options),
+                }
+            ),
+            errors=errors,
         )
 
     async def _provision_device(self, data, device_type):
         """Provision device with received credentials."""
         _LOGGER.info(f"Provisioning device: {self._device_id}")
         ca_cert = await self._get_amazon_root_ca()
-        
-        sensor_count = len(self._sensor_configs.get(self._device_id, []))
-        _LOGGER.info(f"Creating config entry for device {self._device_id} with {sensor_count} sensors")
 
-        title = f"Device {self._device_name}" if self._device_name else f"Device {self._device_id}"
+        sensor_count = len(self._sensor_configs.get(self._device_id, []))
+        _LOGGER.info(
+            f"Creating config entry for device {self._device_id} with {sensor_count} sensors"
+        )
+
+        title = (
+            f"Device {self._device_name}"
+            if self._device_name
+            else f"Device {self._device_id}"
+        )
 
         return self.async_create_entry(
             title=title,
@@ -284,8 +379,9 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_API_KEY: self._api_key,
                 CONF_SENSOR_CONFIG: self._sensor_configs.get(self._device_id, []),
                 CONF_DEVICE_TYPE: device_type,
-            }
+            },
         )
+
 
 class LMTIoTOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):
@@ -299,7 +395,11 @@ class LMTIoTOptionsFlow(config_entries.OptionsFlow):
             try:
                 async with aiohttp.ClientSession() as session:
                     headers = {"X-API-KEY": new_key}
-                    async with session.get(f"{API_URL}/user", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    async with session.get(
+                        f"{API_URL}/user",
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=10),
+                    ) as response:
                         if response.status != 200:
                             errors["base"] = "invalid_api_key"
             except Exception:
@@ -307,17 +407,23 @@ class LMTIoTOptionsFlow(config_entries.OptionsFlow):
 
             if not errors:
                 new_data = {**self._config_entry.data, CONF_API_KEY: new_key}
-                self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
+                self.hass.config_entries.async_update_entry(
+                    self._config_entry, data=new_data
+                )
                 await self.hass.config_entries.async_reload(self._config_entry.entry_id)
                 return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Required(CONF_API_KEY): selector.TextSelector(
-                    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
-                ),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.PASSWORD
+                        )
+                    ),
+                }
+            ),
             errors=errors,
         )
 
@@ -326,7 +432,10 @@ class LMTIoTOptionsFlow(config_entries.OptionsFlow):
         try:
             _LOGGER.info("Downloading Amazon Root CA certificate")
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://www.amazontrust.com/repository/AmazonRootCA1.pem", timeout=aiohttp.ClientTimeout(total=10)) as response:
+                async with session.get(
+                    "https://www.amazontrust.com/repository/AmazonRootCA1.pem",
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as response:
                     _LOGGER.info(f"Amazon Root CA download status: {response.status}")
                     return await response.text()
         except Exception as e:
