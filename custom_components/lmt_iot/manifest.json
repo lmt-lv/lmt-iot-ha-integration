@@ -7,6 +7,5 @@
   "codeowners": ["@lmt-iot"],
   "version": "1.3.0",
   "iot_class": "cloud_push",
-  "config_flow": true,
-  "icon": "icon.png"
+  "config_flow": true
 }

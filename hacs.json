@@ -1,5 +1,6 @@
 {
   "name": "LMT IoT",
   "render_readme": true,
-  "domains": ["mqtt", "sensor"]
+  "domains": ["mqtt", "sensor"],
+  "homeassistant": "2024.1.0"
 }
