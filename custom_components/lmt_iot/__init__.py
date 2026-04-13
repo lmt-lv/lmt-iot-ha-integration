@@ -101,7 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if rc != 0:
                 _LOGGER.warning(f"Disconnected from LMT IoT Cloud: rc={rc}, will auto-reconnect")
             else:
-                _LOGGER.info(f"Disconnected from LMT IoT Cloud")
+                _LOGGER.info("Disconnected from LMT IoT Cloud")
         
         def on_subscribe(client, userdata, mid, granted_qos):
             _LOGGER.debug(f"Subscription confirmed: mid={mid}, qos={granted_qos}")
