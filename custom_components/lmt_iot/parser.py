@@ -7,7 +7,7 @@ def parse_uplink_message(payload: dict) -> dict | None:
         return _parse_v2_uplink(payload)
     elif "data" in payload and "msdInfoData" in payload:
         return _parse_v1_uplink(payload)
-    
+
     return None
 
 
@@ -15,40 +15,40 @@ def _parse_v1_uplink(payload: dict) -> dict | None:
     """Parse v1 uplink message format."""
     if not isinstance(payload["data"], list):
         return None
-    
+
     server_identity = payload["msdInfoData"].get("mServerIdentity")
-    
+
     for device_data in payload["data"]:
         if device_data.get("mSerial") != server_identity:
             continue
-            
+
         parsed = {}
-        
+
         if "mTempData" in device_data and device_data["mTempData"]:
             temp_data = device_data["mTempData"][0]["mData"]
             if temp_data:
                 parsed["TEMPERATURE"] = temp_data[-1]
-        
+
         if "mHumidData" in device_data and device_data["mHumidData"]:
             humid_data = device_data["mHumidData"][0]["mData"]
             if humid_data:
                 parsed["HUMIDITY"] = humid_data[-1]
-        
+
         if "mCoData" in device_data and device_data["mCoData"]:
             co_data = device_data["mCoData"][0]["mData"]
             if co_data:
                 parsed["CO"] = co_data[-1]
-        
+
         if "mIaqData" in device_data and device_data["mIaqData"]:
             iaq_data = device_data["mIaqData"][0]["mData"]
             if iaq_data:
                 parsed["IAQ"] = iaq_data[-1]
-        
+
         if "mSmokeStatus" in device_data:
             smoke_status = device_data["mSmokeStatus"]
             status_map = {0: "No smoke", 1: "Warning", 2: "Alarm"}
             parsed["SMOKE_STATUS"] = status_map.get(smoke_status, "UNKNOWN")
-        
+
         if "mRsrp" in device_data and device_data["mRsrp"] is not None:
             parsed["RSRP"] = device_data["mRsrp"]
             parsed["SIGNAL_STRENGTH"] = _classify_signal(device_data["mRsrp"])
@@ -56,9 +56,9 @@ def _parse_v1_uplink(payload: dict) -> dict | None:
             parsed["RSRQ"] = device_data["mRsrq"]
         if "mSinr" in device_data and device_data["mSinr"] is not None:
             parsed["SINR"] = device_data["mSinr"]
-        
+
         return parsed if parsed else None
-    
+
     return None
 
 
@@ -75,9 +75,9 @@ def _parse_v2_uplink(payload: dict) -> dict | None:
     measurements = payload.get("measurements", {})
     if not measurements:
         return None
-    
+
     parsed = {}
-    
+
     for key, values in measurements.items():
         if key == "SIGNAL_STRENGTH" and values:
             signal = values[-1]
@@ -95,5 +95,5 @@ def _parse_v2_uplink(payload: dict) -> dict | None:
                 parsed[key] = float(values[-1][1])
             except (ValueError, TypeError, IndexError):
                 pass
-    
+
     return parsed if parsed else None
