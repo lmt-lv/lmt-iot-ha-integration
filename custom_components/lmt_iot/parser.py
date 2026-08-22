@@ -24,22 +24,22 @@ def _parse_v1_uplink(payload: dict) -> dict | None:
 
         parsed = {}
 
-        if "mTempData" in device_data and device_data["mTempData"]:
+        if device_data.get("mTempData"):
             temp_data = device_data["mTempData"][0]["mData"]
             if temp_data:
                 parsed["TEMPERATURE"] = temp_data[-1]
 
-        if "mHumidData" in device_data and device_data["mHumidData"]:
+        if device_data.get("mHumidData"):
             humid_data = device_data["mHumidData"][0]["mData"]
             if humid_data:
                 parsed["HUMIDITY"] = humid_data[-1]
 
-        if "mCoData" in device_data and device_data["mCoData"]:
+        if device_data.get("mCoData"):
             co_data = device_data["mCoData"][0]["mData"]
             if co_data:
                 parsed["CO"] = co_data[-1]
 
-        if "mIaqData" in device_data and device_data["mIaqData"]:
+        if device_data.get("mIaqData"):
             iaq_data = device_data["mIaqData"][0]["mData"]
             if iaq_data:
                 parsed["IAQ"] = iaq_data[-1]
