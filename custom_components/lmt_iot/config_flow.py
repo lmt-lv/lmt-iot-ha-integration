@@ -4,6 +4,7 @@ Developed by LMT IoT
 https://github.com/lmt-lv/lmt-iot-ha-integration
 """
 
+import asyncio
 import logging
 import voluptuous as vol
 import aiohttp
@@ -253,7 +254,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         return self.async_abort(reason="no_devices")
 
                     return await self.async_step_device_select()
-        except aiohttp.ClientTimeout:
+        except asyncio.TimeoutError:
             return self._show_api_error("timeout")
         except aiohttp.ClientError:
             return self._show_api_error("connection_error")
@@ -328,7 +329,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             return await self._provision_device(
                                 provision_data, device_type
                             )
-            except aiohttp.ClientTimeout:
+            except asyncio.TimeoutError:
                 errors["base"] = "timeout"
             except aiohttp.ClientError:
                 errors["base"] = "connection_error"
@@ -382,6 +383,22 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
+    async def _get_amazon_root_ca(self):
+        """Download Amazon Root CA 1 certificate."""
+        try:
+            _LOGGER.info("Downloading Amazon Root CA certificate")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    "https://www.amazontrust.com/repository/AmazonRootCA1.pem",
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as response:
+                    _LOGGER.info(f"Amazon Root CA download status: {response.status}")
+                    return await response.text()
+        except Exception as e:
+            _LOGGER.error(f"Failed to download Amazon Root CA: {e}", exc_info=True)
+            _LOGGER.warning("Using fallback Amazon Root CA certificate")
+            return "-----BEGIN CERTIFICATE-----\nMIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF\nADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\nb24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\nb3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\nca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\nIFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\nVOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\njgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC\nAYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA\nA4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI\nU5PMCCjjmCXPI6T53iHTfIuJruydjsw2hUwsOjsQl/8gDHmG5Oq14cNA4+7QKj2V\n11RUYfXTpz0AhHsHnoDcTDMxnpXb78ieQw2E+MPWbbWmXw/VWJJwpxn4OkqNGpF8\nShQl5Z6psk4ajJaGSiJOrM8fDS8acDRRVCs0Uc7pmAoTGnHXXXO2VEA5Y9Xig3CH\n82o9RpR1BSiMDx0GXEcSUk1EZfFDgqSWjOhK1J8Z4jNVrqI1qbFff3RHksVK1EPe\nOAD0C/X7RxbAnp/XDjgA+RFrOO/r\n-----END CERTIFICATE-----"
+
 
 class LMTIoTOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):
@@ -426,19 +443,3 @@ class LMTIoTOptionsFlow(config_entries.OptionsFlow):
             ),
             errors=errors,
         )
-
-    async def _get_amazon_root_ca(self):
-        """Download Amazon Root CA 1 certificate."""
-        try:
-            _LOGGER.info("Downloading Amazon Root CA certificate")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    "https://www.amazontrust.com/repository/AmazonRootCA1.pem",
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as response:
-                    _LOGGER.info(f"Amazon Root CA download status: {response.status}")
-                    return await response.text()
-        except Exception as e:
-            _LOGGER.error(f"Failed to download Amazon Root CA: {e}", exc_info=True)
-            _LOGGER.warning("Using fallback Amazon Root CA certificate")
-            return "-----BEGIN CERTIFICATE-----\nMIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF\nADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\nb24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\nb3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\nca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\nIFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\nVOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\njgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC\nAYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA\nA4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI\nU5PMCCjjmCXPI6T53iHTfIuJruydjsw2hUwsOjsQl/8gDHmG5Oq14cNA4+7QKj2V\n11RUYfXTpz0AhHsHnoDcTDMxnpXb78ieQw2E+MPWbbWmXw/VWJJwpxn4OkqNGpF8\nShQl5Z6psk4ajJaGSiJOrM8fDS8acDRRVCs0Uc7pmAoTGnHXXXO2VEA5Y9Xig3CH\n82o9RpR1BSiMDx0GXEcSUk1EZfFDgqSWjOhK1J8Z4jNVrqI1qbFff3RHksVK1EPe\nOAD0C/X7RxbAnp/XDjgA+RFrOO/r\n-----END CERTIFICATE-----"
