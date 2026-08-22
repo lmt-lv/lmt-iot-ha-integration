@@ -6,22 +6,23 @@ https://github.com/lmt-lv/lmt-iot-ha-integration
 
 import asyncio
 import logging
-import voluptuous as vol
+
 import aiohttp
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from . import (
-    DOMAIN,
-    CONF_DEVICE_ID,
     CONF_API_KEY,
     CONF_CA_CERT,
     CONF_CLIENT_CERT,
     CONF_CLIENT_KEY,
-    CONF_SENSOR_CONFIG,
+    CONF_DEVICE_ID,
     CONF_DEVICE_TYPE,
+    CONF_SENSOR_CONFIG,
+    DOMAIN,
 )
 from .config import API_URL, MQTT_HOST, MQTT_PORT
 
@@ -185,7 +186,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     _LOGGER.warning(
                         f"User info request failed with status {response.status}"
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _LOGGER.warning(f"Failed to fetch user info: {e}")
         return None
 
@@ -258,8 +259,8 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self._show_api_error("timeout")
         except aiohttp.ClientError:
             return self._show_api_error("connection_error")
-        except Exception as e:
-            _LOGGER.error(f"Failed to get devices: {e}", exc_info=True)
+        except Exception:
+            _LOGGER.exception("Failed to get devices")
             return self._show_api_error("cannot_connect")
 
     def _show_api_error(self, error_key):
@@ -333,10 +334,9 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "timeout"
             except aiohttp.ClientError:
                 errors["base"] = "connection_error"
-            except Exception as e:
-                _LOGGER.error(
-                    f"Certificate retrieval failed for device {self._device_id}: {e}",
-                    exc_info=True,
+            except Exception:
+                _LOGGER.exception(
+                    "Certificate retrieval failed for device %s", self._device_id
                 )
                 errors["base"] = "cannot_connect"
 
@@ -387,15 +387,17 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Download Amazon Root CA 1 certificate."""
         try:
             _LOGGER.info("Downloading Amazon Root CA certificate")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
                     "https://www.amazontrust.com/repository/AmazonRootCA1.pem",
                     timeout=aiohttp.ClientTimeout(total=10),
-                ) as response:
-                    _LOGGER.info(f"Amazon Root CA download status: {response.status}")
-                    return await response.text()
-        except Exception as e:
-            _LOGGER.error(f"Failed to download Amazon Root CA: {e}", exc_info=True)
+                ) as response,
+            ):
+                _LOGGER.info(f"Amazon Root CA download status: {response.status}")
+                return await response.text()
+        except Exception:
+            _LOGGER.exception("Failed to download Amazon Root CA")
             _LOGGER.warning("Using fallback Amazon Root CA certificate")
             return "-----BEGIN CERTIFICATE-----\nMIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF\nADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\nb24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL\nMAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\nb3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\nca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\nIFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\nVOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\njgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC\nAYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA\nA4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI\nU5PMCCjjmCXPI6T53iHTfIuJruydjsw2hUwsOjsQl/8gDHmG5Oq14cNA4+7QKj2V\n11RUYfXTpz0AhHsHnoDcTDMxnpXb78ieQw2E+MPWbbWmXw/VWJJwpxn4OkqNGpF8\nShQl5Z6psk4ajJaGSiJOrM8fDS8acDRRVCs0Uc7pmAoTGnHXXXO2VEA5Y9Xig3CH\n82o9RpR1BSiMDx0GXEcSUk1EZfFDgqSWjOhK1J8Z4jNVrqI1qbFff3RHksVK1EPe\nOAD0C/X7RxbAnp/XDjgA+RFrOO/r\n-----END CERTIFICATE-----"
 
@@ -419,7 +421,7 @@ class LMTIoTOptionsFlow(config_entries.OptionsFlow):
                     ) as response:
                         if response.status != 200:
                             errors["base"] = "invalid_api_key"
-            except Exception:
+            except Exception:  # noqa: BLE001
                 errors["base"] = "cannot_connect"
 
             if not errors:
