@@ -1,21 +1,21 @@
 """Sensor platform for LMT IoT Device integration."""
 
 import logging
+from datetime import timedelta
 
 from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,
     RestoreEntity,
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.util import dt as dt_util
-from datetime import timedelta
 
-from . import DOMAIN, CONF_DEVICE_ID, CONF_SENSOR_CONFIG, CONF_DEVICE_TYPE
+from . import CONF_DEVICE_ID, CONF_DEVICE_TYPE, CONF_SENSOR_CONFIG, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
                     _LOGGER.debug(
                         f"{self._attr_name} updated: {self._attr_native_value}{self._attr_native_unit_of_measurement or ''}"
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 _LOGGER.error(f"Error parsing {self._key}: {e}")
 
         self.async_on_remove(

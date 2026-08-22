@@ -4,31 +4,32 @@ Developed by LMT IoT
 https://github.com/lmt-lv/lmt-iot-ha-integration
 """
 
+import json
 import logging
+import os
 import ssl
 import tempfile
-import os
-import json
 from enum import IntEnum
-import aiohttp
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.components.persistent_notification import async_create
-import paho.mqtt.client as mqtt
 
-from .parser import parse_uplink_message
+import aiohttp
+import paho.mqtt.client as mqtt
+from homeassistant.components.persistent_notification import async_create
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.core import HomeAssistant
+
 from .config import (
-    DOMAIN,
-    CONF_DEVICE_ID,
+    API_URL,
     CONF_API_KEY,
     CONF_CA_CERT,
     CONF_CLIENT_CERT,
     CONF_CLIENT_KEY,
-    CONF_SENSOR_CONFIG,
+    CONF_DEVICE_ID,
     CONF_DEVICE_TYPE,
-    API_URL,
+    CONF_SENSOR_CONFIG,
+    DOMAIN,
 )
+from .parser import parse_uplink_message
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -211,7 +212,7 @@ async def _refresh_sensor_config(hass: HomeAssistant, entry: ConfigEntry) -> Non
                     _notify_reload_fallback(
                         hass, entry, f"API returned HTTP {response.status}"
                     )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _LOGGER.warning("Failed to refresh sensor config: %s", e)
         _notify_reload_fallback(hass, entry, str(e))
 
