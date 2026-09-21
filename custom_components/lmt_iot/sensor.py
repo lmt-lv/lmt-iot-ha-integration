@@ -19,6 +19,21 @@ from . import CONF_DEVICE_ID, CONF_DEVICE_TYPE, CONF_SENSOR_CONFIG, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+# Device class names used by the LMT IoT API that differ from Home Assistant's
+DEVICE_CLASS_ALIASES = {
+    "co2": SensorDeviceClass.CO2,
+    "carbon_dioxide": SensorDeviceClass.CO2,
+    "co": SensorDeviceClass.CO,
+    "carbon_monoxide": SensorDeviceClass.CO,
+    "voc": SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+    "tvoc": SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+    "pm1.0": SensorDeviceClass.PM1,
+    "pm2.5": SensorDeviceClass.PM25,
+    "pm10.0": SensorDeviceClass.PM10,
+    "rssi": SensorDeviceClass.SIGNAL_STRENGTH,
+    "temp": SensorDeviceClass.TEMPERATURE,
+}
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
@@ -77,10 +92,13 @@ class LMTIoTDynamicSensor(RestoreEntity, SensorEntity):
         device_class = config.get("deviceClass")
         if device_class:
             device_class = device_class.lower()
-            try:
-                self._attr_device_class = SensorDeviceClass(device_class)
-            except ValueError:
-                _LOGGER.warning(f"Unknown device class: {device_class}")
+            if device_class in DEVICE_CLASS_ALIASES:
+                self._attr_device_class = DEVICE_CLASS_ALIASES[device_class]
+            else:
+                try:
+                    self._attr_device_class = SensorDeviceClass(device_class)
+                except ValueError:
+                    _LOGGER.warning(f"Unknown device class: {device_class}")
 
     async def async_added_to_hass(self):
         """Subscribe to MQTT messages via event bus."""
