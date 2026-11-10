@@ -4,7 +4,6 @@ Developed by LMT IoT
 https://github.com/lmt-lv/lmt-iot-ha-integration
 """
 
-import asyncio
 import logging
 
 import aiohttp
@@ -255,7 +254,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         return self.async_abort(reason="no_devices")
 
                     return await self.async_step_device_select()
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return self._show_api_error("timeout")
         except aiohttp.ClientError:
             return self._show_api_error("connection_error")
@@ -330,7 +329,7 @@ class LMTIoTMQTTConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             return await self._provision_device(
                                 provision_data, device_type
                             )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 errors["base"] = "timeout"
             except aiohttp.ClientError:
                 errors["base"] = "connection_error"
