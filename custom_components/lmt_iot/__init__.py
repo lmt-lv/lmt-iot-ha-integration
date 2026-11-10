@@ -147,9 +147,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = data
 
     # Set up sensor platform
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    except Exception:
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        await _stop_mqtt_client(hass, data["client"])
+        raise
 
     return True
+
+
+async def _stop_mqtt_client(hass: HomeAssistant, client: mqtt.Client) -> None:
+    """Stop the MQTT network loop and disconnect."""
+    await hass.async_add_executor_job(client.loop_stop)
+    await hass.async_add_executor_job(client.disconnect)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -157,10 +168,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
 
     if unload_ok:
-        data = hass.data[DOMAIN].pop(entry.entry_id)
-        client = data["client"]
-        await hass.async_add_executor_job(client.loop_stop)
-        await hass.async_add_executor_job(client.disconnect)
+        data = hass.data[DOMAIN].pop(entry.entry_id, None)
+        if data:
+            await _stop_mqtt_client(hass, data["client"])
 
     return unload_ok
 
