@@ -4,7 +4,6 @@ import logging
 from datetime import timedelta
 
 from homeassistant.components.sensor import (
-    RestoreEntity,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
@@ -13,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_track_point_in_utc_time
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from . import CONF_DEVICE_ID, CONF_DEVICE_TYPE, CONF_SENSOR_CONFIG, DOMAIN
